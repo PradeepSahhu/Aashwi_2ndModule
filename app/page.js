@@ -3,13 +3,8 @@
 import Image from "next/image";
 import { CgGames } from "react-icons/cg";
 import { SiRiotgames, SiAmazongames } from "react-icons/si";
-import { GiWantedReward } from "react-icons/gi";
+
 import { useState, useEffect } from "react";
-import AuctionCard from "@/Components/AuctionCard";
-import Betting from "@/Components/Betting";
-import HighestBidder from "@/Components/HighestBidder";
-import BoughtCard from "@/Components/BoughtCard";
-import SellCard from "@/Components/SellCard";
 
 //contract instance & Network Details
 
@@ -31,26 +26,39 @@ export default function Home() {
   //! Add balance setter.
   const [addBalance, setAddBalance] = useState(false);
 
+  const [accountBalance, setAccountBalance] = useState();
+
+  const [expenditureAmount, setExpenditureAmount] = useState();
+
+  //! lending money (adding)
+  const [lendingMoney, setLendingMoney] = useState(false);
+
+  //? lending variables
+
+  const [lendingAddress, setLendingAddress] = useState();
+  const [lendingAmount, setLendingAmout] = useState();
+
   //! Transfer balance setter.
 
   //! Record balance setter.
 
   //! totoal balance setter.
 
+  //! expenditure record
+
+  const [totalExpenditure, setTotelExpenditure] = useState();
+  const [showTotalExpenditure, setShowtotalExpenditure] = useState();
+
+  const [lendingRecords, setLendingRecords] = useState();
+  const [totalLendingList, setTotalLendingList] = useState();
+
   //contract data.
 
-  const [tokenBalance, setTokenBalance] = useState();
   const [chainID, setChainID] = useState();
   const [chainName, setChainName] = useState();
   const [chainAccount, setChainAccount] = useState();
 
   // to get the current ongoing data.
-
-  const [fetch, setFetch] = useState();
-  const [seller, setSeller] = useState();
-  const [tokenID, setTokenID] = useState();
-
-  const [currentAucData, setCurrentAucData] = useState();
 
   //Functions of the contract.
 
@@ -67,18 +75,75 @@ export default function Home() {
 
   //to know about current ongoing auction
 
-  const includeExpenditure = async () => {
+  const getAccountBalance = async () => {
     try {
       const contractInstance = await ContractConnection();
 
-      const res = await contractInstance.addExpenditure(10);
+      const res = await contractInstance.getBalance();
+      setAccountBalance(parseInt(res));
     } catch (error) {
       console.log(error);
     }
   };
 
-  if (fetch !== undefined) {
-    getIPFSData();
+  const getExpenditureRecords = async () => {
+    try {
+      const contractInstance = await ContractConnection();
+      const res = await contractInstance.getLendMoney();
+
+      setTotalLendingList(res);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const includeExpenditure = async () => {
+    try {
+      const contractInstance = await ContractConnection();
+
+      const res = await contractInstance.addExpenditure(
+        parseInt(expenditureAmount)
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const totalExpenses = async () => {
+    try {
+      const contractInstance = await ContractConnection();
+
+      const res = await contractInstance.getExpenditure();
+      setTotelExpenditure(parseInt(res));
+      console.table([totalExpenditure]);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const addTheLendingDetail = async () => {
+    try {
+      console.table([lendingAddress, lendingAmount]);
+      const contractInstance = await ContractConnection();
+      const res = contractInstance.lending(
+        lendingAddress,
+        parseInt(lendingAmount)
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  if (totalLendingList == undefined) {
+    getExpenditureRecords();
+  }
+
+  if (accountBalance == undefined) {
+    getAccountBalance();
+  }
+
+  if (totalExpenditure == undefined) {
+    totalExpenses();
   }
 
   useEffect(() => {
@@ -100,7 +165,7 @@ export default function Home() {
             <p>
               Your Balance :{" "}
               <span className="text-blue-600">
-                {tokenBalance ? tokenBalance : 0}
+                {accountBalance ? accountBalance : 0}
               </span>
             </p>
           </div>
@@ -135,23 +200,23 @@ export default function Home() {
         </button>
         <button
           className="px-5 py-2 bg-blue-600 rounded-md text-black hover:scale-90 transition-all duration-300"
-          onClick={() => setShowBetYourOwn(!showBetYourOwn)}
+          onClick={() => setLendingMoney(!lendingMoney)}
         >
-          Transfer Balance
+          Lending Money
           <SiRiotgames className="inline-block m-2 text-4xl" />
         </button>
         <button
           className="px-5 py-2 bg-blue-600 rounded-md text-black hover:scale-90 transition-all duration-300"
-          onClick={() => setShowSellAsset(!showSellAsset)}
+          onClick={() => setLendingRecords(!lendingRecords)}
         >
-          Record Expenditure
+          Lending Records
           <SiAmazongames className="inline-block m-2 text-4xl" />
         </button>
         <button
           className="px-5 py-2 bg-blue-600 rounded-md text-black hover:scale-90 transition-all duration-300"
-          onClick={() => setShowPlayGame(!showPlayGame)}
+          onClick={() => setShowtotalExpenditure(!showTotalExpenditure)}
         >
-          Total Spend
+          Total Expenditure
           <FaRobot className="inline-block m-2 text-4xl" />
         </button>
       </div>
@@ -164,21 +229,15 @@ export default function Home() {
                 Add Expenditure
               </p>
             </div>
+
             <label className="grid col-start-1 col-end-1 ">
-              Enter the Address
+              Enter the Amount to include
             </label>
             <input
-              type="number"
-              className="text-white bg-slate-800 p-5 rounded-md mx-5 my-5 outline-none focus:scale-110"
-              required
-              // onChange={(e) => setBuyAmount(e.target.value)}
-            />
-            <label className="grid col-start-1 col-end-1 ">Enter the Wei</label>
-            <input
               className="text-white bg-slate-800 p-5 rounded-md mx-5 my-5 outline-none focus:scale-110"
               required
               type="number"
-              // onChange={(e) => setWeiAmount(e.target.value)}
+              onChange={(e) => setExpenditureAmount(e.target.value)}
             />
           </form>
 
@@ -187,9 +246,92 @@ export default function Home() {
               className="bg-blue-900 p-5 rounded-xl hover:bg-rose-900"
               onClick={() => includeExpenditure()}
             >
-              Add 10 Expenditure
+              Add Expenditure
             </button>
           </div>
+        </div>
+      )}
+
+      {lendingMoney && (
+        <div className=" bg-black text-white grid grid-cols-2 m-10">
+          <form className="grid bg-[#2a66b6] px-20 py-10  col-start-1 col-end-3 mx-64 rounded-xl">
+            <div className="flex justify-center mb-5">
+              <p className="text-2xl font-bold text-white text-transparent">
+                Add Lending Details
+              </p>
+            </div>
+            <label className="grid col-start-1 col-end-1 ">
+              Enter the Address
+            </label>
+            <input
+              type="txt"
+              className="text-white bg-slate-800 p-5 rounded-md mx-5 my-5 outline-none focus:scale-110"
+              required
+              onChange={(e) => setLendingAddress(e.target.value)}
+            />
+            <label className="grid col-start-1 col-end-1 ">
+              Enter the Amount Lended
+            </label>
+            <input
+              className="text-white bg-slate-800 p-5 rounded-md mx-5 my-5 outline-none focus:scale-110"
+              required
+              type="number"
+              onChange={(e) => setLendingAmout(e.target.value)}
+            />
+          </form>
+
+          <div className="flex justify-center col-span-2 items-center py-5">
+            <button
+              className="bg-blue-900 p-5 rounded-xl hover:bg-rose-900"
+              onClick={() => addTheLendingDetail()}
+            >
+              Add in the receipt
+            </button>
+          </div>
+        </div>
+      )}
+
+      {lendingRecords && (
+        <div className="mx-auto max-w-7xl pt-40 px-6" id="exchange-section">
+          <div className="table-b bg-navyblue p-8 overflow-x-auto">
+            <h3 className="text-offwhite text-2xl justify-center flex">
+              Lending Records
+            </h3>
+            <table className="table-auto w-full mt-10">
+              <thead>
+                <tr className="text-white bg-darkblue rounded-lg">
+                  <th className="px-4 py-4 text-start font-normal">S.no</th>
+                  <th className="px-4 py-4 text-start font-normal">Address</th>
+                  <th className="px-4 py-4 font-normal">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {totalLendingList.map((eachInstance, i) => (
+                  <tr key={i} className="border-b border-b-darkblue">
+                    <td className="px-4 py-6 text-center text-white">
+                      {i + 1}
+                    </td>
+
+                    <td className="px-4 py-6 text-center text-white">
+                      {eachInstance._recepient}
+                    </td>
+                    <td className={`px-4 py-6 text-center `}>
+                      {parseInt(eachInstance.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {showTotalExpenditure && (
+        <div className="ml-10 h-[40vh] w-full flex justify-center items-center">
+          <p className="text-[1rem]">
+            Total Expenditure is :{" "}
+            <span className="text-blue-600 ml-5 mt-5 font-bold text-[2rem]">{`${totalExpenditure}`}</span>
+          </p>
         </div>
       )}
     </div>
